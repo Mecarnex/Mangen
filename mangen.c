@@ -9,6 +9,25 @@
 
 #define BUFFER_SIZE 32768 // 32 KB
 
+const char *get_git_commit_hash() {
+    static char commit_hash[41];
+    FILE *fp = popen("git rev-parse HEAD", "r");
+    if (fp == NULL) {
+        perror("Ошибка при получении git commit hash");
+        return NULL;
+    }
+
+    if (fgets(commit_hash, sizeof(commit_hash), fp) == NULL) {
+        perror("Ошибка чтения git commit hash");
+        fclose(fp);
+        return NULL;
+    }
+
+    commit_hash[strcspn(commit_hash, "\n")] = 0;
+    fclose(fp);
+    return commit_hash;
+}
+
 void print_hash(unsigned char hash[SHA256_DIGEST_LENGTH]) {
     for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
         printf("%02x", hash[i]);
@@ -90,6 +109,7 @@ int main(int argc, char *argv[]) {
     const char *VERSION = "1.0";
     const char *AUTHOR = "Таташев Элси";
 
+
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "-h") == 0) {
             printf("Утилита для вычисления хэш-сумм всех файлов в директории по алгоритму SHA-256.\n");
@@ -102,8 +122,15 @@ int main(int argc, char *argv[]) {
         }
 
         else if (strcmp(argv[i], "-v") == 0) {
-            printf("mangen v%s\n", VERSION);
-            printf("автор: %s\n", AUTHOR);
+            const char* commit_hash = get_git_commit_hash();
+            if (commit_hash) {
+                printf("Mangen, версия: %s\n", commit_hash);
+                printf("автор: %s\n", AUTHOR);
+            }
+            else {
+                printf("Не удалось получить Git commit hash.\n");
+            }
+
             return 0;
         }
 
